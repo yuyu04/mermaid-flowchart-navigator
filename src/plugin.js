@@ -1,4 +1,5 @@
-const { Plugin, Modal, MarkdownView, FuzzySuggestModal, MarkdownRenderChild, MarkdownRenderer, Notice } = require("obsidian");
+const { Plugin, Modal, MarkdownView, FuzzySuggestModal, MarkdownRenderChild, MarkdownRenderer, Notice, editorInfoField } = require("obsidian");
+const { ViewPlugin } = require("@codemirror/view");
 const viewerTemplate = /* VIEWER_DOCUMENT */ null;
 /* SOURCE_GEOMETRY */
 
@@ -55,6 +56,10 @@ class InlineFlow extends MarkdownRenderChild {
 }
 // A per-vault selection can enhance a regular Mermaid fence without editing its source.
 const mermaidHost = ".block-language-mermaid, .mermaid, pre:has(> code.language-mermaid)";
+function mermaidHosts(section) {
+  const matches = section.matches(mermaidHost) ? [section] : [...section.querySelectorAll(mermaidHost)];
+  return matches.filter(host => !matches.some(other => other !== host && other.contains(host)));
+}
 const flatText = value => value.normalize("NFC").replace(/<br\s*\/?>|\s+/gi,"");
 function ordinaryFlow(code){
   return /^(?:graph|flowchart(?:-elk)?)(?=\s|;|$)/i.test(code.trim()
@@ -71,26 +76,111 @@ function matchingBlocks(source,wholeNote,rules,labels){
   return {all,selected};
 }
 class SelectedFlow extends MarkdownRenderChild {
-  constructor(original,block){super(original);this.block=block;}
+  constructor(section, slot, block) {
+    super(section);
+    this.slot = slot;
+    this.block = block;
+  }
   onload(){
-    const original=this.containerEl;
-    const doc=original.ownerDocument,mount=doc.createElement("div");
+    const section = this.containerEl;
+    const doc = section.ownerDocument, mount = doc.createElement("div");
     mount.className="mermaid-flow-selected";
     mount.dataset.flowHeading=this.block.heading;
-    const replace=()=>{
-      const sourceCenters=mermaidNodeCenters(original.matches("svg")?original:original.querySelector("svg"));
+    let original;
+    // On startup Obsidian can replace the fenced <pre> after running postprocessors.
+    // Anchor both observers to the note section and mount only beside the finished SVG.
+    const replace = () => {
+      const current = mermaidHosts(section)[this.slot];
+      const svg = current?.matches("svg") ? current : current?.querySelector("svg");
+      if (!svg) return;
+      rendering.disconnect();
+      const type = svg.getAttribute("aria-roledescription");
+      if (type && !/^(flowchart|graph)\b/i.test(type)) return;
+      original = current;
+      const sourceCenters = mermaidNodeCenters(svg);
       if(original.parentElement){original.after(mount);original.classList.add("mermaid-flow-replaced");}
       else {original.append(mount);original.classList.add("mermaid-flow-container");}
       this.addChild(new InlineFlow(mount,this.block.code,{...this.block.presentation,sourceCenters},()=>{
         mount.hidden=true;original.classList.remove("mermaid-flow-replaced","mermaid-flow-container");
       }));
     };
-    // Long notes render sections on demand. Keep the original visible until it approaches the pane.
+    const rendering = new doc.defaultView.MutationObserver(replace);
     const observer=new doc.defaultView.IntersectionObserver(entries=>{
-      if(entries.some(entry=>entry.isIntersecting)){observer.disconnect();replace();}
+      if (entries.some(entry => entry.isIntersecting)) {
+        observer.disconnect();
+        rendering.observe(section, {childList: true, subtree: true});
+        replace();
+      }
     },{rootMargin:"360px 0px"});
-    observer.observe(original);this.register(()=>observer.disconnect());
-    this.register(()=>{mount.remove();original.classList.remove("mermaid-flow-replaced","mermaid-flow-container");});
+    observer.observe(section);
+    this.register(() => {
+      observer.disconnect();
+      rendering.disconnect();
+      mount.remove();
+      original?.classList.remove("mermaid-flow-replaced","mermaid-flow-container");
+    });
+  }
+}
+// Live Preview renders built-in Mermaid widgets outside the Markdown postprocessor.
+// Match each visible widget to the opening fence in the current editor document.
+class LiveFlowcharts {
+  constructor(view, plugin) {
+    this.view = view;
+    this.plugin = plugin;
+    this.mounted = new Map();
+    this.win = view.dom.ownerDocument.defaultView;
+    this.observer = new this.win.MutationObserver(records => {
+      const hasWidget = node => node.nodeType === 1 &&
+        (node.matches(".cm-lang-mermaid") || node.querySelector(".cm-lang-mermaid"));
+      if (records.some(r => [...r.addedNodes, ...r.removedNodes].some(hasWidget))) this.schedule();
+    });
+    this.observer.observe(view.contentDOM, {childList: true, subtree: true});
+    this.schedule();
+  }
+  schedule() {
+    if (this.frame) return;
+    this.frame = this.win.requestAnimationFrame(() => { this.frame = 0; this.sync(); });
+  }
+  update(update) {
+    if (update.docChanged || update.viewportChanged) this.schedule();
+  }
+  sync() {
+    const {view, plugin} = this;
+    const widgets = new Set(view.contentDOM.querySelectorAll(".cm-lang-mermaid"));
+    const path = view.state.field(editorInfoField, false)?.file?.path?.normalize("NFC");
+    for (const [widget, entry] of this.mounted) {
+      if (!widgets.has(widget) || entry.path !== path) {
+        entry.child.unload();
+        this.mounted.delete(widget);
+      }
+    }
+    if (!path || !widgets.size) return;
+    if (this.doc !== view.state.doc || this.path !== path) {
+      this.doc = view.state.doc;
+      this.path = path;
+      const {selected} = matchingBlocks(this.doc.toString(), plugin.allFlowcharts, plugin.selections.get(path) || [], plugin.labels);
+      this.byLine = new Map(selected.map(block => [block.from, block]));
+    }
+    for (const widget of widgets) {
+      const line = this.doc.lineAt(view.posAtDOM(widget)).number - 1;
+      const block = this.byLine.get(line), existing = this.mounted.get(widget);
+      if (existing && block && existing.block.code === block.code && existing.block.heading === block.heading) continue;
+      if (existing) {
+        existing.child.unload();
+        this.mounted.delete(widget);
+      }
+      if (block) {
+        const child = new SelectedFlow(widget, 0, block);
+        this.mounted.set(widget, {child, block, path});
+        child.load();
+      }
+    }
+  }
+  destroy() {
+    this.win.cancelAnimationFrame(this.frame);
+    this.observer.disconnect();
+    for (const {child} of this.mounted.values()) child.unload();
+    this.mounted.clear();
   }
 }
 class FlowModal extends Modal {
@@ -110,7 +200,7 @@ module.exports=class MermaidFlowchartNavigator extends Plugin {
     this.selections=new Map();
     this.allFlowcharts=settings?.allFlowcharts!==false;
     this.labels=settings?.flowchartLabels||{};
-    this.attached=new WeakSet();
+    this.attached=new WeakMap();
     this.liveBlocks=new Set();
     this.isActive=true;
     this.register(()=>{this.isActive=false;for(const child of this.liveBlocks)child.unload();this.liveBlocks.clear();});
@@ -122,6 +212,7 @@ module.exports=class MermaidFlowchartNavigator extends Plugin {
       this.selections.get(key).push(rule);
     }
     this.registerMarkdownPostProcessor((el,ctx)=>this.renderSelected(el,ctx),1000);
+    this.registerEditorExtension(ViewPlugin.define(view => new LiveFlowcharts(view, this)));
     this.registerMarkdownCodeBlockProcessor("mermaid-flow",(source,el,ctx)=>{
       if(ordinaryFlow(source))return ctx.addChild(new InlineFlow(el,source,{labels:this.labels}));
       const fence="~".repeat(Math.max(3,...Array.from(source.matchAll(/^\s*(~+)/gm),m=>m[1].length+1)));
@@ -144,12 +235,17 @@ module.exports=class MermaidFlowchartNavigator extends Plugin {
     }});
   }
   async renderSelected(el,ctx){
+    if (el.closest(".cm-lang-mermaid")) return;
     const key=ctx.sourcePath.normalize("NFC"),wholeNote=this.allFlowcharts;
     const rules=this.selections.get(key)||[];
     if(!wholeNote && !rules.length)return;
-    const found=el.matches(mermaidHost)?[el]:[...el.querySelectorAll(mermaidHost)];
-    const hosts=found.filter(h=>!found.some(other=>other!==h&&other.contains(h)) && !h.matches(".mermaid-flow-replaced,.mermaid-flow-container"));
+    const hosts=mermaidHosts(el);
     if(!hosts.length)return;
+    // The source element may already be detached by the time the note finishes reading.
+    const anchors = hosts.map(host => {
+      const section = host.closest(".el-pre") || (el === host ? host.parentElement : el) || el;
+      return {section, slot: mermaidHosts(section).indexOf(host)};
+    });
     const file=this.app.vault.getAbstractFileByPath(ctx.sourcePath);
     if(!file?.stat)return;
     const cached=this.noteCache.get(key);
@@ -160,6 +256,8 @@ module.exports=class MermaidFlowchartNavigator extends Plugin {
     const {all,selected}=await this.noteCache.get(key).data;
     if(!this.isActive)return;
     hosts.forEach((host,index)=>{
+      const {section, slot} = anchors[index];
+      if (slot < 0 || this.attached.get(section)?.has(slot)) return;
       if(/^sequence/i.test(host.querySelector("svg")?.getAttribute("aria-roledescription")||""))return;
       const info=ctx.getSectionInfo(host)||ctx.getSectionInfo(el);
       let pick=null;
@@ -171,16 +269,18 @@ module.exports=class MermaidFlowchartNavigator extends Plugin {
       }
       if(!pick){
         const text=flatText(host.textContent||"");
-        const labels=[...host.querySelectorAll("g.node .nodeLabel, g.node .label text")]
+        const labels=[...host.querySelectorAll("g.node .nodeLabel, g.node .label text, g.pele-node .pele-label")]
           .map(node=>flatText(node.textContent||"")).filter(Boolean);
         const matches=selected.filter(b=>text===b.search || labels.length && labels.every(label=>b.search.includes(label)));
         if(matches.length && matches.every(b=>b.code===matches[0].code))pick=matches[0];
       }
-      if(pick && !this.attached.has(host)){
-        this.attached.add(host);
-        const child=new SelectedFlow(host,pick);
+      if(pick){
+        const slots = this.attached.get(section) || new Set();
+        this.attached.set(section, slots);
+        slots.add(slot);
+        const child=new SelectedFlow(section,slot,pick);
         this.liveBlocks.add(child);
-        child.register(()=>{this.attached.delete(host);this.liveBlocks.delete(child);});
+        child.register(()=>{slots.delete(slot);this.liveBlocks.delete(child);});
         ctx.addChild(child);
       }
     });

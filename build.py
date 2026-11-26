@@ -25,22 +25,22 @@ def build():
     viewer = viewer.replace("/* MERMAID_IMPORT */", renderer)
     example = json.dumps(read("examples/request-review.mmd").strip(), ensure_ascii=False).replace("<", "\\u003c")
     page = read("src/document.html").replace("{{EXAMPLE}}", example).replace("<!-- VIEWER -->", viewer)
+    license_text = read("LICENSE")
+    page = page.replace("<!-- PROJECT_LICENSE -->", "<!--\n" + license_text + "-->")
     (DIST / "viewer.html").write_bytes(page.encode("utf-8"))
 
     plugin = read("src/plugin.js").replace("/* SOURCE_GEOMETRY */", read("src/source-geometry.js"))
     plugin = plugin.replace("/* VIEWER_DOCUMENT */ null", json.dumps(page, ensure_ascii=False))
     assets = {
-        "main.js": plugin,
+        "main.js": "/*!\n" + license_text + "*/\n" + plugin,
         "manifest.json": read("manifest.json"),
         "styles.css": read("src/plugin.css"),
+        "LICENSE": license_text,
         "THIRD-PARTY-LICENSE.txt": (
             "Mermaid\n" + read("vendor/mermaid-LICENSE.txt") +
             "\nDagre and graphlib\n" + read("vendor/dagre-LICENSE.txt")
         ),
     }
-    if (ROOT / "LICENSE").is_file():
-        assets["LICENSE"] = read("LICENSE")
-
     bundle = DIST / "mermaid-flowchart-navigator.zip"
     with ZipFile(bundle, "w") as archive:
         for name, content in assets.items():

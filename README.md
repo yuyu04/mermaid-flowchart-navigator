@@ -55,3 +55,5 @@ flowchart TD
 ## 소스에서 빌드하기
 
 `python3 build.py`를 실행하면 `dist/`에 `viewer.html`, 설치 ZIP, Obsidian에 복사할 `mermaid-flow-viewer/` 폴더가 생깁니다. Python 표준 라이브러리만 사용합니다. 함께 배포하는 Mermaid 11.12.0 문법 분석기와 Dagre 3.1.4의 라이선스를 확인할 수 있습니다. [Mermaid](vendor/mermaid-LICENSE.txt) · [Dagre와 graphlib](vendor/dagre-LICENSE.txt)
+
+이 플러그인과 독립 HTML 뷰어는 MIT 라이선스로 배포합니다. [MIT License](LICENSE)
