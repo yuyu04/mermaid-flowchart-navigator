@@ -1,0 +1,6 @@
+.mermaid-flow-frame { display: block; width: 100%; height: 540px; border: 0; background: white; }
+.mermaid-flow-modal { width: min(1050px, 96vw); max-width: 96vw; }
+.mermaid-flow-modal .modal-content { overflow: auto; }
+.mermaid-flow-modal .mermaid-flow-frame { height: min(76vh, 800px); }
+.mermaid-flow-replaced, .mermaid-flow-container > :not(.mermaid-flow-selected) { display: none !important; }
+.mermaid-flow-selected { width: 100%; min-width: 0; white-space: normal; }

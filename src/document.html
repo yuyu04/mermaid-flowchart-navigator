@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ko" data-presentation="standalone">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+  <title>Mermaid Flowchart Navigator</title>
+  <style>
+    html { background: #fff; color-scheme: light; }
+    body { margin: 0; padding: clamp(8px, 2vw, 24px); font-family: system-ui, sans-serif; }
+    main { max-width: 1100px; margin: 0 auto; }
+    #mermaid-flowchart-navigator[data-invalid] :is(.tsf-region,.tsf-readout,.tsf-tools) { display: none; }
+    html[data-presentation="inline"] body { padding: 3px; }
+    html[data-presentation="inline"] main { max-width: none; }
+    html[data-presentation="inline"] #mermaid-flowchart-navigator .tsf-head { display: none; }
+    html[data-presentation="inline"] #mermaid-flowchart-navigator .tsf-tools { padding: 4px 0 0; min-height: 25px; }
+    html[data-presentation="inline"] #mermaid-flowchart-navigator .tsf-readout { padding: 10px 2px 4px; }
+    html[data-presentation="inline"] #mermaid-flowchart-navigator:not([data-invalid]) .tsf-import { display: none; }
+  </style>
+</head>
+<body>
+  <script type="application/json" id="tsf-initial">""</script>
+  <script type="application/json" id="tsf-example">{{EXAMPLE}}</script>
+  <main><!-- VIEWER --></main>
+  <script>
+    if (document.documentElement.dataset.presentation === "inline" && parent !== window) {
+      const box = document.querySelector("main");
+      new ResizeObserver(() => {
+        parent.postMessage({
+          type: "mermaid-flow-viewer:size",
+          height: box.getBoundingClientRect().height + 8,
+          invalid: !!box.querySelector("[data-invalid]")
+        }, "*");
+      }).observe(box);
+    }
+  </script>
+</body>
+</html>

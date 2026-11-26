@@ -1,0 +1,540 @@
+<section id="mermaid-flowchart-navigator" lang="ko" aria-labelledby="tsf-title">
+  <header class="tsf-head">
+    <div>
+      <p class="tsf-context"></p>
+      <h2 id="tsf-title">Mermaid Flowchart Navigator</h2>
+    </div>
+  </header>
+  <details class="tsf-import">
+    <summary>Mermaid 코드 불러오기</summary>
+    <form>
+      <label for="tsf-code">순서도 또는 시퀀스 다이어그램 코드</label>
+      <textarea id="tsf-code" rows="6" spellcheck="false" autocapitalize="off" placeholder="flowchart TD&#10;  A([시작]) --&gt; B{기록 확인?}&#10;  B --&gt;|예| C([충족])&#10;  B --&gt;|아니오| D([판정 불충분])"></textarea>
+      <button type="submit">순서도로 변환</button>
+      <p class="tsf-error" role="alert" hidden></p>
+    </form>
+  </details>
+  <div class="tsf-tools">
+    <p>도형이나 화살표를 눌러 경로를 선택하세요. 도형에 마우스를 올리면 설명이 열립니다.</p>
+    <div class="tsf-display" role="group" aria-label="순서도 보기 설정" hidden>
+      <span class="tsf-step-nav" hidden><button type="button" data-step="back">이전</button> <button type="button" data-step="first">처음</button></span>
+      <select aria-label="순서도 배치"><option value="auto">자동 배치</option><option value="vertical">세로 배치</option><option value="steps">단계별 보기</option></select>
+      <div class="tsf-zoom">
+        <button type="button" data-zoom="out" aria-label="순서도 축소">−</button>
+        <output aria-label="현재 배율"></output>
+        <button type="button" data-zoom="in" aria-label="순서도 확대">+</button>
+      </div>
+      <button type="button" data-zoom="width">폭 맞춤</button>
+      <button type="button" data-zoom="whole">전체 보기</button>
+    </div>
+    <div class="tsf-pan" role="group" aria-label="순서도 가로 이동" hidden>
+      <button type="button" data-pan="-1" aria-label="순서도 왼쪽으로 이동">←</button>
+      <button type="button" data-pan="1" aria-label="순서도 오른쪽으로 이동">→</button>
+    </div>
+  </div>
+  <div class="tsf-region">
+    <div class="tsf-scroll" role="region" aria-label="순서도">
+      <div class="tsf-plane">
+      <div class="tsf-board" role="group" aria-label="순서도 도형">
+        <svg class="tsf-wires" aria-hidden="true"></svg>
+      </div>
+      </div>
+    </div>
+    <div class="tsf-tip" id="tsf-detail" role="group" aria-labelledby="tsf-detail-title" aria-hidden="true" hidden>
+      <strong id="tsf-detail-title"></strong><p></p><div class="tsf-tip-actions" hidden></div>
+    </div>
+  </div>
+  <div class="tsf-readout" aria-live="polite" aria-atomic="true">
+    <div><span class="tsf-swatch" aria-hidden="true"></span><strong></strong></div>
+    <p></p>
+  </div>
+</section>
+<style>
+  #mermaid-flowchart-navigator {
+    color-scheme: light;
+    --paper: #fff;
+    --ink: #28282b;
+    --caption: #707176;
+    --rule: #ededee;
+    --idle-wire: #C4C4C4;
+    --active-wire: #747477;
+    --start: #EDB63B;
+    --work: #E8708E;
+    --decision: #6CAFD3;
+    --success: #66AA6E;
+    --failure: #E0704F;
+    --indeterminate: #9E9C95;
+    width: 100%; min-width: 0; isolation: isolate;
+    background: var(--paper); color: var(--ink);
+    font-family: Pretendard, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
+    word-break: keep-all; overflow-wrap: break-word; text-align: left;
+  }
+  #mermaid-flowchart-navigator *, #mermaid-flowchart-navigator *::after, #mermaid-flowchart-navigator *::before { box-sizing: border-box; }
+  #mermaid-flowchart-navigator [hidden] { display: none !important; }
+  #mermaid-flowchart-navigator p, #mermaid-flowchart-navigator h2, #mermaid-flowchart-navigator h3 { margin: 0; }
+  #mermaid-flowchart-navigator button, #mermaid-flowchart-navigator summary { font-family: inherit; cursor: var(--cursor-interaction, pointer); }
+  #mermaid-flowchart-navigator button {
+    appearance: none; margin: 0; min-width: 0; min-height: 0; padding: 0;
+    border: 0; border-radius: 0; background: transparent; box-shadow: none; color: inherit;
+  }
+  #mermaid-flowchart-navigator :is(button,summary):focus-visible { outline: 2px solid #55565a; outline-offset: 3px; }
+  #mermaid-flowchart-navigator .tsf-head {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 12px 24px; flex-wrap: wrap; padding: 14px 12px 16px;
+    border-bottom: 1px solid var(--rule);
+  }
+  #mermaid-flowchart-navigator .tsf-context { margin-bottom: 5px; font-size: 12px; line-height: 1.4; font-weight: 650; color: var(--caption); }
+  #mermaid-flowchart-navigator h2 { font-size: clamp(24px, 4vw, 32px); line-height: 1.18; font-weight: 760; letter-spacing: -.045em; color: var(--ink); }
+  #mermaid-flowchart-navigator .tsf-tools { display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 39px; padding: 4px 12px 0; }
+  #mermaid-flowchart-navigator .tsf-tools p { color: var(--caption); font-size: 12px; line-height: 1.6; }
+  #mermaid-flowchart-navigator .tsf-tools { flex-wrap:wrap; }
+  #mermaid-flowchart-navigator .tsf-display { display:flex; flex-wrap:wrap; align-items:center; gap:5px; font-size:12px; }
+  #mermaid-flowchart-navigator .tsf-display :is(button,select) { padding:4px 8px; border:1px solid #dedee2; border-radius:7px; background:#fff; color:#41434a; font-family:inherit; font-size:12px; line-height:1.4; font-weight:600; height:29px; }
+  #mermaid-flowchart-navigator .tsf-display button:hover { background:#f3f4f6; }
+  #mermaid-flowchart-navigator .tsf-display button:disabled { color:#aaa; cursor:default; }
+  #mermaid-flowchart-navigator .tsf-display button[aria-pressed="true"] { background:#eeeeF1; border-color:#bfc0c5; }
+  #mermaid-flowchart-navigator .tsf-zoom { display:inline-flex; align-items:center; border:1px solid #dedee2; border-radius:7px; }
+  #mermaid-flowchart-navigator .tsf-zoom button { height:27px; width:29px; padding:0; border:0; font-size:16px; }
+  #mermaid-flowchart-navigator .tsf-zoom output { color:#4c4f56; min-width:38px; text-align:center; font-size:12px; font-variant-numeric:tabular-nums; }
+  #mermaid-flowchart-navigator .tsf-pan { display: flex; gap: 2px; flex: none; }
+  #mermaid-flowchart-navigator .tsf-pan button { width: 32px; height: 30px; border-radius: 7px; font: 18px/1 system-ui, sans-serif; }
+  #mermaid-flowchart-navigator .tsf-pan button:disabled { color: #bdbdc0; cursor: default; }
+  #mermaid-flowchart-navigator .tsf-pan button:enabled:hover { background: #f3f3f3; }
+  #mermaid-flowchart-navigator .tsf-region { position: relative; min-width: 0; }
+  #mermaid-flowchart-navigator .tsf-scroll { width: 100%; min-width: 0; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: thin; scrollbar-color: #c6c6c8 transparent; }
+  #mermaid-flowchart-navigator .tsf-scroll.tsf-long { max-height: 548px; overflow: auto; overscroll-behavior: contain; }
+  #mermaid-flowchart-navigator .tsf-scroll.is-fit { position: relative; overflow: clip; max-height: none; overscroll-behavior: auto; }
+  #mermaid-flowchart-navigator .tsf-scroll.is-fit.is-zoomed-wide { overflow-x:auto; overflow-y:hidden; }
+  #mermaid-flowchart-navigator .is-fit .tsf-plane { position:relative; margin:0 auto; overflow:clip; }
+  #mermaid-flowchart-navigator .is-fit .tsf-board { position: absolute; top: 0; margin: 0; transform-origin: 0 0; }
+  #mermaid-flowchart-navigator .tsf-board { position: relative; margin: 0 auto; }
+  #mermaid-flowchart-navigator .tsf-wires { width: 100%; height: 100%; position: absolute; inset: 0; display: block; overflow: visible; }
+  #mermaid-flowchart-navigator .tsf-edge { color: var(--idle-wire); }
+  #mermaid-flowchart-navigator .tsf-edge.is-active { color: var(--active-wire); }
+  #mermaid-flowchart-navigator .tsf-edge[data-context] { color:#d8dde2; }
+  #mermaid-flowchart-navigator .tsf-shaft {
+    fill: none; stroke: currentColor; stroke-width: 4px; stroke-linecap: butt; stroke-linejoin: miter;
+    vector-effect: non-scaling-stroke; pointer-events: none;
+  }
+  #mermaid-flowchart-navigator .tsf-headmark { fill: currentColor; stroke: none; pointer-events: none; }
+  #mermaid-flowchart-navigator .tsf-hit {
+    fill: none; stroke: transparent; stroke-width: 26px; stroke-linejoin: bevel;
+    pointer-events: stroke; cursor: var(--cursor-interaction, pointer);
+  }
+  #mermaid-flowchart-navigator .tsf-node, #mermaid-flowchart-navigator .tsf-choice {
+    position: absolute; display: grid; place-items: center; border: none; background: transparent; box-shadow: none;
+    transform: translate(-50%, -50%); white-space: nowrap; text-align: center;
+  }
+  #mermaid-flowchart-navigator .tsf-node { color: #fff; z-index: 1; font-size: 16px; line-height: 1.15; font-weight: 750; letter-spacing: -.035em; }
+  #mermaid-flowchart-navigator .tsf-board .tsf-node { font-size: 18px; }
+  #mermaid-flowchart-navigator .tsf-node svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+  #mermaid-flowchart-navigator .tsf-node span { position: relative; pointer-events: none; color: #fff; }
+  #mermaid-flowchart-navigator .is-fit .tsf-caption { max-width: 86%; white-space: normal; text-wrap: balance; word-break: keep-all; overflow-wrap: anywhere; font-size: 16px; line-height: 1.18; }
+  #mermaid-flowchart-navigator .is-fit [data-kind="decision"] .tsf-caption { max-width: 69%; }
+  #mermaid-flowchart-navigator .tsf-node[data-context] { cursor:default; opacity:1; }
+  #mermaid-flowchart-navigator .is-fit .tsf-node[data-context] .tsf-caption { color:#64727d; font-size:14px; font-weight:625; }
+  #mermaid-flowchart-navigator .tsf-choice:disabled { color:#87929c; cursor:default; opacity:1; pointer-events:none; }
+  #mermaid-flowchart-navigator .is-fit .tsf-choice:empty { pointer-events: none; }
+  #mermaid-flowchart-navigator .tsf-node .tsf-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  #mermaid-flowchart-navigator .tsf-choice {
+    z-index: 2; width: max-content; min-width: 44px; height: 36px; padding: 0 4px;
+    font-size: 12px; line-height: 1; font-weight: 550; letter-spacing: 0; color: #747579;
+  }
+  #mermaid-flowchart-navigator .tsf-tip {
+    position: absolute; z-index: 4; width: min(268px, calc(100% - 16px)); padding: 13px 16px;
+    pointer-events: none; border-radius: 11px; background: #303135; color: #fff;
+  }
+  #mermaid-flowchart-navigator .tsf-tip strong { display: block; margin-bottom: 4px; color: #fff; font-size: 14px; font-weight: 700; line-height: 1.4; }
+  #mermaid-flowchart-navigator .tsf-tip p { font-size: 13px; line-height: 1.55; color: #f0f0f2; }
+  #mermaid-flowchart-navigator .tsf-tip.is-pinned .tsf-tip-actions { pointer-events: auto; }
+  #mermaid-flowchart-navigator .tsf-tip.is-pinned:has(.tsf-tip-actions:not([hidden])) { max-height: min(320px, 80%); overflow: auto; pointer-events: auto; }
+  #mermaid-flowchart-navigator .tsf-tip-actions { display: flex; flex-wrap: wrap; gap: 4px 6px; padding-top: 8px; margin-top: 8px; border-top: 1px solid #525358; }
+  #mermaid-flowchart-navigator .tsf-tip-actions button { padding: 6px 10px; border-radius: 5px; font-size: 13px; line-height: 1.45; color: #fff; background: #45464b; text-align: left; }
+  #mermaid-flowchart-navigator .tsf-tip-actions button[aria-pressed="true"], #mermaid-flowchart-navigator .tsf-tip-actions button:hover { background: #616267; }
+  #mermaid-flowchart-navigator .tsf-tip-actions button:focus-visible { outline-color: #fff; outline-offset: 1px; }
+  #mermaid-flowchart-navigator .tsf-readout { border-top: 1px solid var(--rule); padding: 15px 12px 12px; }
+  #mermaid-flowchart-navigator .tsf-readout > div { display: flex; align-items: center; gap: 8px; }
+  #mermaid-flowchart-navigator .tsf-swatch { display: inline-block; width: 9px; height: 9px; border-radius: 50%; }
+  #mermaid-flowchart-navigator .tsf-readout strong { font-size: 16px; line-height: 1.4; font-weight: 720; color: var(--ink); }
+  #mermaid-flowchart-navigator .tsf-readout p { color: #55565b; margin-top: 5px; font-size: 13px; line-height: 1.6; }
+  #mermaid-flowchart-navigator details { margin: 0 12px 5px; padding: 0; background: transparent; border: 0; box-shadow: none; }
+  #mermaid-flowchart-navigator summary { padding: 8px 0; font-size: 13px; font-weight: 650; color: var(--ink); }
+  #mermaid-flowchart-navigator .tsf-import { margin-top: 4px; margin-bottom: 0; }
+  #mermaid-flowchart-navigator .tsf-import form { display: grid; justify-items: start; gap: 7px; padding: 4px 0 12px; }
+  #mermaid-flowchart-navigator .tsf-import label, #mermaid-flowchart-navigator .tsf-error { font-size: 13px; line-height: 1.45; }
+  #mermaid-flowchart-navigator .tsf-import textarea { display:block; width:100%; padding:9px; border:1px solid #ceced0; border-radius:7px; color:#2e2e32; background:#fafafa; font:14px/1.5 ui-monospace, monospace; resize:vertical; }
+  #mermaid-flowchart-navigator .tsf-import button { padding:8px 14px; border-radius:8px; color:#fff; background:#36373a; font-size:13px; font-weight:650; }
+  #mermaid-flowchart-navigator .tsf-import .tsf-error { color:#903e30; }
+  @media (pointer: coarse) {
+    #mermaid-flowchart-navigator .tsf-choice, #mermaid-flowchart-navigator .tsf-pan button, #mermaid-flowchart-navigator .tsf-tip-actions button { min-height: 44px; }
+    #mermaid-flowchart-navigator .tsf-pan button { width: 44px; }
+    #mermaid-flowchart-navigator .tsf-hit { stroke-width: 32px; }
+  }
+  @media (max-width: 460px) {
+    #mermaid-flowchart-navigator .tsf-head { align-items: start; flex-direction: column; }
+    #mermaid-flowchart-navigator .tsf-tools { padding-top: 8px; }
+  }
+</style>
+<script>
+(() => {
+  const root = document.getElementById("mermaid-flowchart-navigator");
+  const board = root.querySelector(".tsf-board");
+  const viewport = root.querySelector(".tsf-scroll");
+  const region = root.querySelector(".tsf-region");
+  const wires = root.querySelector(".tsf-wires");
+  const tip = root.querySelector(".tsf-tip");
+  const readout = root.querySelector(".tsf-readout");
+  const pan = root.querySelector(".tsf-pan");
+  const display = root.querySelector(".tsf-display"), layoutSelect=display.querySelector("select");
+  const plane=viewport.querySelector(".tsf-plane");
+  let zoomMode="width",manualScale=1,displayScale=1,parentPaneHeight=0,visibleDiagram;
+  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+  /* MERMAID_GRAMMARS */
+  const gap = 10;
+  const slant = 16;
+  const normals = { N: [0,-1], E: [1,0], S: [0,1], W: [-1,0] };
+  const fills = { start: "--start", process: "--work", io: "--work", decision: "--decision", success: "--success", failure: "--failure", indeterminate: "--indeterminate" };
+  const shapeNames = { start: "시작", process: "처리", io: "입출력", decision: "판단", success: "결과", failure: "결과", indeterminate: "결과" };
+  function node(kind, label, x, y, w, h, title, description) {
+    return { kind, label, x, y, w, h, title, description };
+  }
+  function edge(id, from, out, to, into, choice, label = "", slot = 0) {
+    return { id, from, out, to, into, choice, label, slot };
+  }
+  const nodes = new Map(), edges = new Map();
+  const ns = "http://www.w3.org/2000/svg";
+  let inspection = null;
+  let pinned = false;
+  function svg(name, attributes = {}) {
+    const el = document.createElementNS(ns, name);
+    for (const [key,value] of Object.entries(attributes)) el.setAttribute(key, value);
+    return el;
+  }
+  function html(tag, className, text) {
+    const el = document.createElement(tag);
+    if (className) el.className = className;
+    if (text !== undefined) el.textContent = text;
+    return el;
+  }
+  function diamond(w, h) {
+    // Rounding trims the virtual corners; compensate so the painted tips reach the ports.
+    const t = .075, cx = w/2, cy = h/2, rx = cx/(1-t/2), ry = cy/(1-t/2);
+    const vertices = [[cx,cy-ry],[cx+rx,cy],[cx,cy+ry],[cx-rx,cy]];
+    const toward = (a,b) => [a[0]+t*(b[0]-a[0]), a[1]+t*(b[1]-a[1])];
+    return vertices.map((v,i) => {
+      const before = toward(v,vertices[(i+3)%4]), after = toward(v,vertices[(i+1)%4]);
+      return (i ? "L" : "M")+before.join(" ")+" Q"+v.join(" ")+" "+after.join(" ");
+    }).join(" ")+" Z";
+  }
+  function silhouette(n) {
+    if (n.kind === "decision") return svg("path",{ d: diamond(n.w,n.h) });
+    if (n.kind === "io") return svg("polygon",{ points: [[slant,0],[n.w,0],[n.w-slant,n.h],[0,n.h]].map(p=>p.join(",")).join(" ") });
+    return svg("rect",{ width:n.w, height:n.h, rx:n.kind === "process" ? 8 : n.h/2 });
+  }
+  function port(n, side, slot = 0) {
+    const [dx,dy] = normals[side];
+    // Horizontal ports on a parallelogram meet the midpoint of its sloping side.
+    const halfWidth = (n.w - (n.kind === "io" ? slant : 0))/2;
+    return [n.x+dx*(halfWidth+gap)+(dy ? slot : 0), n.y+dy*(n.h/2+gap)+(dx ? slot : 0)];
+  }
+  function pointsFor(e, diagram) {
+    const a = port(diagram.nodes[e.from], e.out), b = port(diagram.nodes[e.to], e.into, e.slot);
+    if (a[0] === b[0] || a[1] === b[1]) return [a,b];
+    const bend = normals[e.out][0] ? [b[0],a[1]] : [a[0],b[1]];
+    return [a,bend,b];
+  }
+  function pathThrough(points) { return points.map((p,i) => (i ? "L" : "M")+p.join(" ")).join(" "); }
+  function labelCenter(e, points) {
+    if(e.labelAt)return e.labelAt;
+    const [a,b] = points;
+    const horizontal = a[1] === b[1];
+    if (e.label && horizontal && points.length === 3 && Math.abs(b[0]-a[0]) < 33) {
+      return [b[0]-Math.sign(b[0]-a[0])*25,(b[1]+points[2][1])/2];
+    }
+    const x = (a[0]+b[0])/2, y = (a[1]+b[1])/2;
+    if (!e.label) return [x,y];
+    return horizontal ? [x,y-17] : [x+(e.label.length > 3 ? 39 : 20),y];
+  }
+  function placeTip() {
+    if (!inspection) return;
+    const anchor = nodes.get(inspection)?.getBoundingClientRect();
+    if (!anchor) return;
+    const box = region.getBoundingClientRect();
+    if (anchor.right <= box.left || anchor.left >= box.right || anchor.top >= box.bottom || anchor.bottom <= box.top) { closeTip(); return; }
+    const left = Math.max(8,Math.min(box.width-tip.offsetWidth-8, anchor.left-box.left+(anchor.width-tip.offsetWidth)/2));
+    const above = anchor.top-box.top-tip.offsetHeight-8;
+    const top = Math.max(4,Math.min(box.height-tip.offsetHeight-4,above >= 4 ? above : anchor.bottom-box.top+8));
+    tip.style.left = left+"px"; tip.style.top = top+"px";
+  }
+  function openTip(id, pin = false) {
+    if (pinned && !pin) return;
+    if (inspection && inspection !== id) nodes.get(inspection)?.setAttribute("aria-expanded","false");
+    inspection = id;
+    if (pin) pinned = true;
+    const n = imported.nodes[id];
+    tip.querySelector("strong").textContent = n.title;
+    tip.querySelector("p").textContent = n.description;
+    const actions = tip.querySelector(".tsf-tip-actions");
+    actions.replaceChildren();
+    const incoming = imported.incoming.get(id);
+    const outgoing = imported.outgoing.get(id);
+    if (pin && (n.kind === "decision" || incoming.length > 1 || outgoing.length > 1)) {
+      let links;
+      if (imported.layoutMode === "steps") {
+        const fromCenter = imported.outgoing.get(stepState(imported).center).filter(edge => edge.to === id);
+        links = fromCenter.length > 1 ? fromCenter : outgoing;
+      } else {
+        links = incoming.length > 1 ? [...incoming, ...outgoing] : outgoing;
+      }
+      for (const e of links) {
+        const prefix = e.to === id ? imported.nodes[e.from].label + " → " : "";
+        const button = html("button", "", prefix + (e.fullLabel || imported.nodes[e.to].label));
+        button.type = "button"; button.dataset.choose = e.id;
+        button.setAttribute("aria-pressed", String(!importedSelection.multiple && importedSelection.path.includes(e.id)));
+        button.addEventListener("click",ev => {
+          choose(e);
+          if (ev.detail === 0) edges.get(e.id)?.key.focus({preventScroll:true});
+        });
+        actions.append(button);
+      }
+    }
+    actions.hidden = !actions.childElementCount;
+    tip.classList.toggle("is-pinned",pin);
+    tip.setAttribute("aria-hidden",String(!pin));
+    if (pin) nodes.get(id).setAttribute("aria-expanded","true");
+    tip.hidden = false;
+    placeTip();
+  }
+  function closeTip() {
+    if (inspection) nodes.get(inspection)?.setAttribute("aria-expanded","false");
+    inspection = null; pinned = false; tip.hidden = true;
+    tip.setAttribute("aria-hidden","true"); tip.classList.remove("is-pinned");
+  }
+  function makeNode(id, n) {
+    const button = html("button","tsf-node");
+    button.type = "button"; button.dataset.node = id; button.dataset.kind = n.kind;
+    button.setAttribute("aria-label",shapeNames[n.kind]+" · "+n.title);
+    button.setAttribute("aria-controls","tsf-detail"); button.setAttribute("aria-expanded","false");
+    const description = html("span","tsf-sr",n.description);
+    description.id = "tsf-desc-"+id;
+    button.setAttribute("aria-describedby",description.id);
+    Object.assign(button.style,{ left:n.x+"px", top:n.y+"px", width:n.w+"px", height:n.h+"px" });
+    const art = svg("svg",{ viewBox:"0 0 "+n.w+" "+n.h, "aria-hidden":"true" });
+    const form = silhouette(n);
+    const color="var("+fills[n.kind]+")";
+    form.setAttribute("fill",n.context?"color-mix(in srgb, "+color+" 18%, #f5f7f9)":color);
+    art.append(form); button.append(art,html("span","tsf-caption",n.label),description);
+    if(n.context){
+      button.dataset.context=n.context;button.disabled=true;button.tabIndex=-1;
+      button.setAttribute("aria-label",(n.context==="before"?"지난 단계 · ":"다음 단계 미리보기 · ")+n.title);
+      nodes.set(id,button);board.append(button);return;
+    }
+    button.addEventListener("pointerenter",ev => { if (ev.pointerType !== "touch") openTip(id); });
+    button.addEventListener("pointerleave",() => { if (!pinned && inspection === id && !button.matches(":focus-visible")) closeTip(); });
+    button.addEventListener("focus",() => { if (pinned && inspection !== id) closeTip(); openTip(id); });
+    button.addEventListener("blur",ev => { if (inspection === id && !tip.contains(ev.relatedTarget)) closeTip(); });
+    button.addEventListener("click",ev => {
+      if(imported.layoutMode==="steps"){
+        if(!stepNode(id))openTip(id,true);
+        return;
+      }
+      const wasPinned = pinned && inspection === id;
+      selectImported(id);
+      updateSelection(true);
+      if (wasPinned) { closeTip(); return; }
+      const hasOptions = n.kind === "decision" || imported.incoming.get(id).length > 1 || imported.outgoing.get(id).length > 1;
+      const pin = hasOptions || ev.detail === 0 || ev.pointerType === "touch" || matchMedia("(hover: none)").matches;
+      openTip(id,pin);
+      if (ev.detail === 0) tip.querySelector(".tsf-tip-actions button")?.focus({preventScroll:true});
+    });
+    nodes.set(id,button); board.append(button);
+  }
+  function choose(e) {
+    closeTip();
+    if(imported.layoutMode==="steps"){followStep(e);return;}
+    selectImported(e.to, e);
+    updateSelection(true);
+  }
+  function makeEdge(e, diagram, drawnSegments) {
+    const sections=e.sections||[pointsFor(e,diagram)];
+    const group = svg("g",{ class:"tsf-edge", "data-edge":e.id, "data-from":e.from, "data-out":e.out, "data-to":e.to, "data-into":e.into });
+    if(e.context)group.dataset.context=e.context;
+    for(const points of sections){
+      // Leave a small break in the lower wire at a crossing. A shared endpoint stays joined.
+      if(e.sections){
+        const segments=points.slice(1).map((end,i)=>[points[i],end]);
+        for(const [a,b] of segments)for(const [c,d] of drawnSegments){
+          const horizontal=a[1]===b[1];
+          if(horizontal===(c[1]===d[1]))continue;
+          const [h,j,v,k]=horizontal?[a,b,c,d]:[c,d,a,b];
+          const x=v[0],y=h[1];
+          if(x>Math.min(h[0],j[0])+5 && x<Math.max(h[0],j[0])-5 &&
+             y>Math.min(v[1],k[1])+5 && y<Math.max(v[1],k[1])-5){
+            group.append(svg("rect",{x:x-5.5,y:y-5.5,width:11,height:11,fill:"var(--paper)",class:"tsf-crossing","pointer-events":"none"}));
+          }
+        }
+        drawnSegments.push(...segments);
+      }
+      const tipAt = points.at(-1), before = points.at(-2);
+      const ux = Math.sign(tipAt[0]-before[0]), uy = Math.sign(tipAt[1]-before[1]);
+      const base = [tipAt[0]-9*ux,tipAt[1]-9*uy];
+      const left = [base[0]-4.8*uy,base[1]+4.8*ux], right = [base[0]+4.8*uy,base[1]-4.8*ux];
+      const shaft = svg("path",{ class:"tsf-shaft", d:pathThrough([...points.slice(0,-1),[tipAt[0]-6*ux,tipAt[1]-6*uy]]) });
+      const head = svg("polygon",{ class:"tsf-headmark",points:[tipAt,left,right].map(p=>p.join(",")).join(" ") });
+      group.append(shaft,head);
+      if(!e.context){
+        const hit=svg("path",{class:"tsf-hit",d:pathThrough(points)});
+        hit.addEventListener("click",()=>choose(e));group.append(hit);
+      }
+    }
+    wires.append(group);
+    const key = html("button","tsf-choice",e.label);
+    key.type = "button"; key.dataset.edgeChoice = e.id;
+    const source = diagram.nodes[e.from], target = diagram.nodes[e.to];
+    key.setAttribute("aria-label",source.label+" → "+target.label+(e.label ? " · "+(e.fullLabel||e.label) : "")+" 경로 선택");
+    const [x,y] = labelCenter(e,sections[0]);
+    Object.assign(key.style,{ left:x+"px", top:y+"px" });
+    if(e.context){key.disabled=true;key.tabIndex=-1;}
+    else key.addEventListener("click",() => choose(e));
+    board.append(key);
+    edges.set(e.id,{ group,key });
+  }
+  function updateSelection(animate = false) {
+    const selected = importedSelection, path = new Set(selected.path);
+    const idle = getComputedStyle(root).getPropertyValue("--idle-wire").trim();
+    const active = getComputedStyle(root).getPropertyValue("--active-wire").trim();
+    let order = 0;
+    for (const [id,{group,key}] of edges) {
+      const wasActive = group.classList.contains("is-active"), on = path.has(id);
+      group.getAnimations().forEach(animation => animation.cancel());
+      group.classList.toggle("is-active",on); key.setAttribute("aria-pressed",String(on));
+      if (animate && on && !wasActive && !reducedMotion.matches) {
+        group.animate([{color:idle},{color:active}],{duration:220,delay:order++*45,fill:"backwards",easing:"ease-out"});
+      }
+    }
+    for (const [id,button] of nodes) {
+      if (id === selected.node) button.setAttribute("aria-current","step"); else button.removeAttribute("aria-current");
+    }
+    readout.querySelector("strong").textContent = selected.title;
+    readout.querySelector("p").textContent = selected.text;
+    readout.querySelector(".tsf-swatch").style.backgroundColor = "var("+fills[imported.nodes[selected.node].kind]+")";
+  }
+  function updatePan() {
+    if(viewport.classList.contains("is-fit")){pan.hidden=true;return;}
+    const limit = viewport.scrollWidth-viewport.clientWidth;
+    pan.hidden = limit <= 1;
+    pan.querySelector('[data-pan="-1"]').disabled = viewport.scrollLeft <= 1;
+    pan.querySelector('[data-pan="1"]').disabled = viewport.scrollLeft >= limit-1;
+  }
+  function fitBoard(diagram) {
+    const fit=!!diagram.flow, width=viewport.clientWidth;
+    viewport.classList.toggle("is-fit",fit);
+    display.hidden=!fit;
+    const widthScale=Math.min(1,width/diagram.width);
+    const embedded=document.documentElement.dataset.presentation==="inline";
+    const pane=embedded?(parentPaneHeight||Math.min(800,screen.availHeight||640)):innerHeight;
+    const heightScale=Math.max(150,pane-155)/diagram.height;
+    const scale=fit && width?(zoomMode==="manual"?manualScale:zoomMode==="whole"?Math.min(widthScale,heightScale):widthScale):1;
+    displayScale=scale;
+    board.style.transform=fit?"scale("+scale+")":"";
+    board.style.left=fit?"0":"";
+    plane.style.width=fit?Math.ceil(diagram.width*scale)+"px":"";
+    plane.style.height=fit?Math.ceil(diagram.height*scale)+"px":"";
+    viewport.classList.toggle("is-zoomed-wide",fit && diagram.width*scale>width+1);
+    display.querySelector("output").textContent=Math.round(scale*100)+"%";
+    display.querySelector('[data-zoom="out"]').disabled=scale<=.101;
+    display.querySelector('[data-zoom="in"]').disabled=scale>=2.999;
+    for(const mode of ["width","whole"])display.querySelector('[data-zoom="'+mode+'"]').setAttribute("aria-pressed",String(zoomMode===mode));
+    if(zoomMode!=="manual")viewport.scrollLeft=0;
+  }
+  function renderView() {
+    closeTip();
+    const source = imported, guided = source.flow && source.layoutMode === "steps";
+    const diagram=guided?stepBoard(source,viewport.clientWidth||680):source;
+    visibleDiagram=diagram;
+    display.querySelector(".tsf-step-nav").hidden=!guided;
+    if(guided){
+      display.querySelector('[data-step="back"]').disabled=!source.stepTrail.length;
+      display.querySelector('[data-step="first"]').disabled=source.initialTrail.join()===source.stepTrail.join();
+    }
+    board.querySelectorAll("button").forEach(button => button.remove());
+    wires.replaceChildren(); edges.clear(); nodes.clear();
+    board.style.width = diagram.width+"px"; board.style.height = diagram.height+"px";
+    board.dataset.layout=guided?"steps":diagram.layoutBasis||"compact";
+    viewport.classList.toggle("tsf-long",!diagram.flow && diagram.height>720);
+    fitBoard(diagram);
+    root.querySelector("#tsf-title").textContent = diagram.title;
+    root.querySelector(".tsf-context").textContent = "도형 "+nodesCount(diagram)+"개 · 연결 "+diagram.edges.length+"개";
+    const instruction = guided
+      ? "답이나 다음 도형을 눌러 진행하세요. 흐린 도형은 앞뒤 단계입니다."
+      : "도형이나 화살표를 눌러 경로를 선택하세요.";
+    root.querySelector(".tsf-tools p").textContent = [instruction, ...diagram.notes].join(" ");
+    board.setAttribute("aria-label",diagram.title);
+    viewport.setAttribute("aria-label",diagram.title);
+    wires.setAttribute("viewBox","0 0 "+diagram.width+" "+diagram.height);
+    const drawnSegments=[];
+    const paintOrder=guided?[...diagram.edges].sort((a,b)=>Number(!!b.context)-Number(!!a.context)):diagram.edges;
+    for (const e of paintOrder) makeEdge(e,diagram,drawnSegments);
+    for (const [id,n] of Object.entries(diagram.nodes)) makeNode(id,n);
+    viewport.scrollLeft = 0;
+    viewport.scrollTop=0;
+    updateSelection(); updatePan();
+  }
+  function nodesCount(diagram) { return Object.keys(diagram.nodes).length; }
+  /* MERMAID_IMPORT */
+  layoutSelect.addEventListener("change",()=>{
+    if(!imported?.flow)return;
+    imported.layoutMode=layoutSelect.value;zoomMode="width";
+    if(imported.layoutMode==="steps"){if(!imported.stepTrail)beginSteps(imported);updateStepSelection();}
+    autoLayout(imported);renderView();
+  });
+  for(const control of display.querySelectorAll("[data-step]"))control.addEventListener("click",()=>{
+    changeStep(control.dataset.step==="first"?[...imported.initialTrail]:imported.stepTrail.slice(0,-1));
+  });
+  for(const control of display.querySelectorAll("button[data-zoom]"))control.addEventListener("click",()=>{
+    const action=control.dataset.zoom;
+    if(action==="in"||action==="out"){
+      zoomMode="manual";manualScale=Math.max(.1,Math.min(3,displayScale*(action==="in"?1.25:.8)));
+    }else zoomMode=action;
+    if(action==="whole" && imported.layoutMode==="steps"){
+      imported.layoutMode="auto";layoutSelect.value="auto";autoLayout(imported);renderView();return;
+    }
+    fitBoard(visibleDiagram);placeTip();
+  });
+  window.addEventListener("message",ev=>{
+    if(parent===window || ev.source!==parent || ev.data?.type!=="mermaid-flow-viewer:pane")return;
+    const h=ev.data.height;if(Number.isFinite(h)&&h>0){parentPaneHeight=h;if(imported?.flow && zoomMode==="whole")fitBoard(visibleDiagram);}
+  });
+  for (const button of pan.querySelectorAll("button")) {
+    button.addEventListener("click",() => viewport.scrollBy({ left:Number(button.dataset.pan)*viewport.clientWidth*.75, behavior:reducedMotion.matches ? "instant" : "smooth" }));
+  }
+  viewport.addEventListener("scroll",() => { updatePan(); placeTip(); },{passive:true});
+  new ResizeObserver(() => {
+    const width=Math.floor(viewport.clientWidth);
+    if(imported?.flow && width && width!==imported.fittedAt){
+      const focused=document.activeElement?.dataset, keepFocus=focused?.node||focused?.edgeChoice;
+      const open=inspection,wasPinned=pinned;
+      autoLayout(imported);renderView();
+      if(keepFocus)(nodes.get(keepFocus)||edges.get(keepFocus)?.key)?.focus({preventScroll:true});
+      if(open && wasPinned)openTip(open,true);
+    }
+    updatePan();placeTip();
+  }).observe(viewport);
+  root.addEventListener("pointerdown",ev => { if (!ev.target.closest(".tsf-node, .tsf-tip")) closeTip(); });
+  tip.addEventListener("focusout",ev => { if (ev.relatedTarget && !tip.contains(ev.relatedTarget)) closeTip(); });
+  document.addEventListener("keydown",ev => {
+    if (ev.key !== "Escape" || !inspection) return;
+    const anchor = nodes.get(inspection);
+    if (tip.contains(document.activeElement)) anchor?.focus({preventScroll:true});
+    closeTip();
+  });
+  const initial=document.getElementById("tsf-initial");
+  const payload=initial?JSON.parse(initial.textContent):"";
+  const initialCode=typeof payload==="string"?payload:payload.source;
+  const example=document.getElementById("tsf-example");
+  if(initialCode || example){
+    field.value=initialCode || JSON.parse(example.textContent);
+    if(!applyCode(field.value,payload?.presentation))root.dataset.invalid="true";
+  }
+})();
+</script>

@@ -1,0 +1,10 @@
+{
+  "id": "mermaid-flow-viewer",
+  "name": "Mermaid Flowchart Navigator",
+  "version": "0.3.2",
+  "minAppVersion": "1.5.0",
+  "description": "Read Mermaid flowcharts with interactive branches, step-by-step navigation, and layouts that fit the note.",
+  "author": "yuyu04",
+  "isDesktopOnly": false,
+  "authorUrl": "https://github.com/yuyu04"
+}
