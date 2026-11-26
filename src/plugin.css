@@ -2,5 +2,11 @@
 .mermaid-flow-modal { width: min(1050px, 96vw); max-width: 96vw; }
 .mermaid-flow-modal .modal-content { overflow: auto; }
 .mermaid-flow-modal .mermaid-flow-frame { height: min(76vh, 800px); }
-.mermaid-flow-replaced, .mermaid-flow-container > :not(.mermaid-flow-selected) { display: none !important; }
+/* The native renderer can recreate its host after the viewer is mounted. */
+.mermaid-flow-replaced,
+:is(.mermaid, .block-language-mermaid, pre):has(+ .mermaid-flow-selected:not([hidden])),
+.mermaid-flow-container > :not(.mermaid-flow-selected),
+.markdown-rendered .mermaid-flow-container > :not(.mermaid-flow-selected) {
+  display: none;
+}
 .mermaid-flow-selected { width: 100%; min-width: 0; white-space: normal; }
