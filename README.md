@@ -1,59 +1,68 @@
 # Mermaid Flowchart Navigator
 
-Explore a Mermaid flowchart in Obsidian or in a standalone HTML file. Click a node or an arrow to trace its path. Long charts open one decision at a time, with the surrounding steps still visible. The interface is in Korean. Both versions work offline.
+Follow a path through a Mermaid flowchart in an Obsidian note. Click a decision or an arrow to see how you reached an outcome. On long charts, you can move through one decision at a time with the previous and upcoming steps in view. The viewer works offline and its controls are in Korean.
 
-![신청서 검토 순서도에서 승인을 선택한 화면. 시작부터 승인까지 이어지는 화살표가 진하게 표시됩니다.](assets/flowchart-preview.png)
+[한국어 사용 안내](README.ko.md)
 
-## Obsidian에 설치하기
+## Installation
 
-1. [최신 설치 ZIP](https://github.com/yuyu04/mermaid-flowchart-navigator/releases/latest/download/mermaid-flowchart-navigator.zip)을 내려받아 압축을 풉니다.
-2. 안에 있는 `mermaid-flow-viewer` 폴더를 사용할 볼트의 `.obsidian/plugins/`에 넣습니다. 설치하면 `.obsidian/plugins/mermaid-flow-viewer/manifest.json`이 생깁니다.
-3. Obsidian을 다시 열고 **설정 → 커뮤니티 플러그인**에서 **Mermaid Flowchart Navigator**를 켭니다.
+In Obsidian, open **Settings → Community plugins → Browse**. Search for **Mermaid Flowchart Navigator**, open its entry, then select **Install** and **Enable**. [Obsidian Community listing](https://community.obsidian.md/plugins/mermaid-flow-viewer)
 
-이전 **Mermaid Flow Viewer**에서 업데이트할 때는 같은 폴더에 새 파일을 덮어쓰면 기존 설정을 이어서 쓸 수 있습니다.
+### Manual installation
 
-## 노트에서 사용하기
+1. Download and extract the [plugin ZIP](https://github.com/yuyu04/mermaid-flowchart-navigator/releases/latest/download/mermaid-flowchart-navigator.zip).
+2. Copy the extracted `mermaid-flow-viewer` folder into your vault’s `.obsidian/plugins/` folder. You should now have `.obsidian/plugins/mermaid-flow-viewer/manifest.json`.
+3. Restart Obsidian, open **Settings → Community plugins**, and enable **Mermaid Flowchart Navigator**.
 
-일반 `mermaid` 코드 블록에 `flowchart` 또는 `graph`를 작성하고 읽기 보기나 라이브 미리보기에서 확인하세요. 시퀀스 다이어그램 같은 다른 도표는 Obsidian의 기본 보기로 열립니다. 명령 팔레트에서 **Mermaid 흐름 뷰어 열기**를 선택하면 현재 순서도를 별도 창에서 볼 수 있습니다.
+If you previously installed **Mermaid Flow Viewer**, copy the new files into the same plugin folder to keep your settings.
+
+## Usage
+
+Paste this block into a note. Switch to **Reading view**, or move the cursor outside the code block in **Live Preview**.
 
 ~~~~markdown
 ```mermaid
 flowchart TD
-  A([시작]) --> B[/신청서 접수/]
-  B --> C{필수 자료 확인?}
-  C -->|예| D([승인]):::success
-  C -->|아니오| E([자료 부족]):::unknown
+  A([Start]) --> B[/Receive request/]
+  B --> C{Is the request complete?}
+  C -->|Yes| D([Approve]):::success
+  C -->|No| E([Request details]):::unknown
 ```
 ~~~~
 
-- **경로 선택** — 도형이나 화살표를 누르면 선택한 경로가 진해집니다. 여러 갈래가 한 결과에 모이면 결과 도형을 눌러 들어오는 경로를 고를 수 있습니다.
-- **자세히 읽기** — 마우스를 올리거나 키보드로 도형에 초점을 맞추면 전체 이름과 설명이 열립니다. 터치 화면에서는 도형을 누르세요.
-- **단계별 보기** — 도형이 15개 이상이면 이 보기로 시작합니다. 흐린 도형은 지나온 단계와 선택지 다음에 올 단계입니다. 선명한 선택지를 눌러 진행하고 **이전** 또는 **처음**으로 돌아갈 수 있습니다.
-- **배치와 크기** — **자동 배치**는 원래 방향을 따릅니다. **세로 배치**는 위에서 아래로, **폭 맞춤**은 현재 노트의 가로 폭에 맞춰 보여 줍니다. **전체 보기**와 **− / +**로 배율을 조절할 수 있습니다.
+Click the **Yes** arrow to highlight the path from **Start** to **Approve**. Click **Request details** to follow the other branch. Hover over a node or focus it with the keyboard to read its full label and description. On a touch screen, tap the node.
 
-방향을 지정한 연결, 분기 라벨, 합류, 되돌아가는 연결을 읽습니다. 같은 ID의 도형은 하나로 표시하며 하위 그룹은 펼쳐서 보여 줍니다. 결과 도형은 `:::success`, `:::failure`, `:::unknown`으로 구분할 수 있습니다. 일반 Mermaid 블록에 방향 없는 선, 자기 자신을 가리키는 선 등 지원 범위 밖의 표현이 있으면 원래 도표가 표시됩니다.
+![A request review flowchart with the path from the start to approval highlighted.](assets/flowchart-preview.png)
 
-## 브라우저와 HTML에서 사용하기
+- **Step through large charts.** A flowchart with 15 or more nodes opens in **단계별 보기** (step-by-step view). Select an answer to move forward. The faded nodes show nearby steps. Use **이전** to go back or **처음** to return to the first decision.
+- **Adjust the view.** Choose **세로 배치** for a top-to-bottom layout. Use **폭 맞춤** to fit the note width, **전체 보기** to fit the entire chart, or **− / +** to zoom.
+- **Open a separate viewer.** In the command palette, search for **Mermaid 흐름 뷰어 열기**. If the note has several flowcharts, you can choose which one to open.
 
-[독립형 viewer.html](https://github.com/yuyu04/mermaid-flowchart-navigator/releases/latest/download/viewer.html)을 내려받아 브라우저에서 여세요. **Mermaid 코드 불러오기**에 코드를 붙여 넣고 **순서도로 변환**을 누르면 됩니다. 브라우저에서 직접 가져올 때는 `sequenceDiagram`의 메시지와 분기도 순서도로 읽을 수 있습니다.
+The plugin reads `flowchart` and `graph` blocks. Obsidian displays sequence diagrams and other diagram types in its built-in viewer. Use `:::success`, `:::failure`, or `:::unknown` on a result node to set its outcome color. Arrows that point to the same node ID converge on that node.
 
-다른 웹페이지에 넣으려면 해당 페이지 옆에 `viewer.html`을 두고, 아래처럼 프레임이 열린 뒤 Mermaid 원문을 전달하세요.
+## Standalone HTML viewer
 
-~~~~html
-<iframe id="flow" title="신청서 검토 순서도" style="width:100%;height:680px;border:0"></iframe>
+Download [viewer.html](https://github.com/yuyu04/mermaid-flowchart-navigator/releases/latest/download/viewer.html) and open it in a browser. Choose **Mermaid 코드 불러오기** (load Mermaid code), paste your diagram, then select **순서도로 변환** (render flowchart). The standalone importer can also turn the messages and branches of a `sequenceDiagram` into a flowchart.
+
+To embed the viewer in a web page, place `viewer.html` beside the page and send the Mermaid source after the frame loads.
+
+```html
+<iframe id="flow" title="Request review" style="width:100%;height:680px;border:0"></iframe>
 <script>
   const frame = document.getElementById("flow");
   frame.addEventListener("load", () => {
-    const source = "flowchart LR\n  A([시작]) --> B[검토] --> C([승인]):::success";
+    const source = "flowchart LR\n  A([Start]) --> B[Review] --> C([Approve]):::success";
     const origin = location.protocol === "file:" ? "*" : location.origin;
     frame.contentWindow.postMessage({ type: "mermaid-flow:render", source }, origin);
   });
   frame.src = "./viewer.html";
 </script>
-~~~~
+```
 
-## 소스에서 빌드하기
+## Build from source
 
-`python3 build.py`를 실행하면 `dist/`에 `viewer.html`, 설치 ZIP, Obsidian에 복사할 `mermaid-flow-viewer/` 폴더가 생깁니다. Python 표준 라이브러리만 사용합니다. 함께 배포하는 Mermaid 11.12.0 문법 분석기와 Dagre 3.1.4의 라이선스를 확인할 수 있습니다. [Mermaid](vendor/mermaid-LICENSE.txt) · [Dagre와 graphlib](vendor/dagre-LICENSE.txt)
+Run `python3 build.py` from the repository root. It uses the Python standard library and writes the standalone HTML file, the install ZIP, and the `mermaid-flow-viewer/` plugin folder under `dist/`.
 
-이 플러그인과 독립 HTML 뷰어는 MIT 라이선스로 배포합니다. [MIT License](LICENSE)
+## License
+
+The plugin and standalone viewer are distributed under the [MIT License](LICENSE). The bundled parsers are from Mermaid 11.12.0, and the layout engine is Dagre 3.1.4. [Mermaid license](vendor/mermaid-LICENSE.txt) · [Dagre and graphlib licenses](vendor/dagre-LICENSE.txt)
