@@ -187,7 +187,8 @@ function compileMermaid(source,presentation={}) {
     const label=(reference?reference+" · ":"")+shortText(text,14), tw=canvas.measureText(label).width;
     const w=Math.ceil(v.kind==="decision"?Math.max(164,tw*1.55+46):Math.max(96,tw+(v.kind==="io"?45:34)));
     nodes[id]=node(v.kind,label,0,0,w,v.kind==="decision"?86:52,v.label,v.description||v.label);
-    nodes[id].sourceId=v.id;
+    // The shape caption is shortened to fit; detail popovers show the whole name.
+    nodes[id].sourceId=v.id;nodes[id].fullLabel=(reference?reference+" · ":"")+text;
   }
   for(const raw of data.links){
     const from=ids.get(raw.from),to=ids.get(raw.to),key=JSON.stringify([from,to,raw.label]);
@@ -204,7 +205,7 @@ function compileMermaid(source,presentation={}) {
     if(n.description!==n.title)continue;
     const before=graph.incoming.get(id),after=graph.outgoing.get(id);
     const adjacent=before.length ? before : after;
-    const names=adjacent.slice(0,3).map(e=>nodes[before.length?e.from:e.to].label);
+    const names=adjacent.slice(0,3).map(e=>{const m=nodes[before.length?e.from:e.to];return m.fullLabel||m.label;});
     if(names.length)n.description=(before.length?"앞 단계 · ":"다음 단계 · ")+names.join(", ")+(adjacent.length>3?" 외 "+(adjacent.length-3)+"개":"");
   }
   return graph;

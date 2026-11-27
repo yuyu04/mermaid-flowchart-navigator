@@ -141,13 +141,14 @@
     font-size: 12px; line-height: 1; font-weight: 550; letter-spacing: 0; color: #747579;
   }
   #mermaid-flowchart-navigator .tsf-tip {
-    position: absolute; z-index: 4; width: min(268px, calc(100% - 16px)); padding: 13px 16px;
+    position: absolute; z-index: 4; width: min(340px, calc(100% - 16px)); padding: 13px 16px;
+    max-height: calc(100% - 8px); overflow: auto; overscroll-behavior: contain; overflow-wrap: anywhere;
     pointer-events: none; border-radius: 11px; background: #303135; color: #fff;
   }
   #mermaid-flowchart-navigator .tsf-tip strong { display: block; margin-bottom: 4px; color: #fff; font-size: 14px; font-weight: 700; line-height: 1.4; }
   #mermaid-flowchart-navigator .tsf-tip p { font-size: 13px; line-height: 1.55; color: #f0f0f2; }
   #mermaid-flowchart-navigator .tsf-tip.is-pinned .tsf-tip-actions { pointer-events: auto; }
-  #mermaid-flowchart-navigator .tsf-tip.is-pinned:has(.tsf-tip-actions:not([hidden])) { max-height: min(320px, 80%); overflow: auto; pointer-events: auto; }
+  #mermaid-flowchart-navigator .tsf-tip.is-pinned { pointer-events: auto; }
   #mermaid-flowchart-navigator .tsf-tip-actions { display: flex; flex-wrap: wrap; gap: 4px 6px; padding-top: 8px; margin-top: 8px; border-top: 1px solid #525358; }
   #mermaid-flowchart-navigator .tsf-tip-actions button { padding: 6px 10px; border-radius: 5px; font-size: 13px; line-height: 1.45; color: #fff; background: #45464b; text-align: left; }
   #mermaid-flowchart-navigator .tsf-tip-actions button[aria-pressed="true"], #mermaid-flowchart-navigator .tsf-tip-actions button:hover { background: #616267; }
@@ -287,8 +288,9 @@
         links = incoming.length > 1 ? [...incoming, ...outgoing] : outgoing;
       }
       for (const e of links) {
-        const prefix = e.to === id ? imported.nodes[e.from].label + " → " : "";
-        const button = html("button", "", prefix + (e.fullLabel || imported.nodes[e.to].label));
+        const name = node => node.fullLabel || node.label;
+        const prefix = e.to === id ? name(imported.nodes[e.from]) + " → " : "";
+        const button = html("button", "", prefix + (e.fullLabel || name(imported.nodes[e.to])));
         button.type = "button"; button.dataset.choose = e.id;
         button.setAttribute("aria-pressed", String(!importedSelection.multiple && importedSelection.path.includes(e.id)));
         button.addEventListener("click",ev => {
